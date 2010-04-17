@@ -78,13 +78,10 @@ performed.
 =cut
 
 has _action_role_args => (
-    traits     => [qw(Array)],
+    is         => 'ro',
     isa        => ArrayRef[Str],
-    init_arg   => 'action_roles',
-    default    => sub { [] },
-    handles    => {
-        _action_role_args => 'elements',
-    },
+    init_arg   => undef,
+    lazy_build => 1,
 );
 
 has _action_roles => (
@@ -99,40 +96,59 @@ has _action_roles => (
 
 sub _build__action_roles {
     my $self = shift;
-    my @roles = $self->_expand_role_shortname($self->_action_role_args);
-    Class::MOP::load_class($_) for @roles;
+    return $self->_action_role_args;
+}
+
+sub _build__action_role_args {
+    my $self = shift;
+    my @roles;
+    if ( my $config = $self->config ) {
+        if ( my $action_roles = $config->{action_roles} ) {
+            @roles = $self->_expand_role_shortname(@$action_roles);
+            Class::MOP::load_class($_) for @roles;
+        }
+    }
+    
     return \@roles;
 }
 
 sub BUILD {
     my $self = shift;
     # force this to run at object creation time
+    $self->_action_role_args;
+    # check if action_roles are RoleNames
     $self->_action_roles;
 }
 
-sub create_action {
-    my ($self, %args) = @_;
+around 'create_action' => sub {
+    my $orig = shift;
+    my $self = shift;
+    my %args = @_;
 
-    my $class = exists $args{attributes}->{ActionClass}
-        ? $args{attributes}->{ActionClass}->[0]
-        : $self->_action_class;
+    my $class = $self->$orig(%args);
 
-    Class::MOP::load_class($class);
+    # XXX find a way to distinguish from actions registered in the
+    # C::Controller and those in MyApp::Controller::Foo and its parents
 
-    my @roles = ($self->_action_roles, @{ $args{attributes}->{Does} || [] });
-    if (@roles) {
-        Class::MOP::load_class($_) for @roles;
-        my $meta = Moose::Meta::Class->initialize($class)->create_anon_class(
-            superclasses => [$class],
-            roles        => \@roles,
-            cache        => 1,
-        );
-        $meta->add_method(meta => sub { $meta });
-        $class = $meta->name;
+    # don't apply roles to default Catalyst::Controller actions
+    unless ( grep { /^_(DISPATCH|BEGIN|AUTO|ACTION|END)$/ } $class->name ) {
+        my @roles = ($self->_action_roles, @{ $class->attributes->{Does} || [] });
+        if (@roles) {
+            my $meta = $class->meta->create_anon_class(
+                superclasses => [ref $class],
+                roles        => \@roles,
+                cache        => 1,
+            );
+            $meta->add_method(meta => sub { $meta });
+            my $sub_class = $meta->name;
+
+            $class = $sub_class->new( \%args );
+        }
     }
 
-    return $class->new(\%args);
-}
+    return $class;
+};
+
 
 sub _expand_role_shortname {
     my ($self, @shortnames) = @_;
