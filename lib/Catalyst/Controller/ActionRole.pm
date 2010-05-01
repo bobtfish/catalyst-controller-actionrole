@@ -23,7 +23,7 @@ extends 'Catalyst::Controller';
 
 =head1 DESCRIPTION
 
-This module allows to apply roles to the C<Catalyst::Action>s for different
+This module allows to apply roles(Moose::Role) to the C<Catalyst::Action>s for different
 controller methods.
 
 For that a C<Does> attribute is provided. That attribute takes an argument,
@@ -45,9 +45,11 @@ without specifying the C<Does> keyword in every action definition:
         action_roles => ['Foo', '~Bar'],
     );
 
-    # has Catalyst::ActionRole::Foo and MyApp::ActionRole::Bar applied
-    # if MyApp::ActionRole::Foo exists and is loadable, it will take
+    # Has Catalyst::ActionRole::Foo and MyApp::ActionRole::Bar applied.
+    # If MyApp::ActionRole::Foo exists and is loadable, it will take
     # precedence over Catalyst::ActionRole::Foo
+    # If MyApp::ActionRole::Bar exists and is loadable, it will be loaded,
+    # but even if it doesn't exist Catalyst::ActionRole::Bar will not be loaded.
     sub moo : Local { ... }
 
 =head1 ROLE PREFIX SEARCHING
