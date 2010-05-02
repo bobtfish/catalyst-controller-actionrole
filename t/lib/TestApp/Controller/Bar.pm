@@ -5,7 +5,7 @@ use Moose;
 use parent qw/Catalyst::Controller::ActionRole/
 
 __PACKAGE__->config(
-    action_roles => ['~Dooh']
+    action_roles => ['~Kooh']
 );
 
 sub foo  : Local Does('Moo') {}
