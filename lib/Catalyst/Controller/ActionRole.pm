@@ -125,7 +125,7 @@ around 'create_action' => sub {
     my $self = shift;
     my %args = @_;
 
-    my $class = $self->$orig(%args);
+    my $action = $self->$orig(%args);
 
     # XXX find a way to distinguish from actions registered in the
     # C::Controller and those in MyApp::Controller::Foo and its parents
@@ -134,7 +134,7 @@ around 'create_action' => sub {
     unless ( grep { /^_(DISPATCH|BEGIN|AUTO|ACTION|END)$/ } $class->name ) {
         my @roles = ($self->_action_roles, @{ $class->attributes->{Does} || [] });
         if (@roles) {
-            my $meta = $class->meta->create_anon_class(
+            my $meta = $action->meta->create_anon_class(
                 superclasses => [ref $class],
                 roles        => \@roles,
                 cache        => 1,
@@ -142,11 +142,11 @@ around 'create_action' => sub {
             $meta->add_method(meta => sub { $meta });
             my $sub_class = $meta->name;
 
-            $class = $sub_class->new( \%args );
+            $action = $sub_class->new( \%args );
         }
     }
 
-    return $class;
+    return $action;
 };
 
 
