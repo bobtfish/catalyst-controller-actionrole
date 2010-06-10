@@ -168,8 +168,14 @@ around 'create_action' => sub {
             );
             $meta->add_method(meta => sub { $meta });
             my $sub_class = $meta->name;
+            my $action_args = $self->config->{action_args};
+            my %extra_args = (
+                %{ $action_args->{'*'}           || {} },
+                %{ $action_args->{ $args{name} } || {} },
+            );
 
-            $action = $sub_class->new( \%args );
+            $action =  $sub_class->new({ %extra_args, %args });
+
         }
     }
 
