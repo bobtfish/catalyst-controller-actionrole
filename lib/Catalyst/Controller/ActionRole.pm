@@ -131,11 +131,11 @@ around 'create_action' => sub {
     # C::Controller and those in MyApp::Controller::Foo and its parents
 
     # don't apply roles to default Catalyst::Controller actions
-    unless ( grep { /^_(DISPATCH|BEGIN|AUTO|ACTION|END)$/ } $class->name ) {
-        my @roles = ($self->_action_roles, @{ $class->attributes->{Does} || [] });
+    unless ( grep { /^_(DISPATCH|BEGIN|AUTO|ACTION|END)$/ } $action->name ) {
+        my @roles = ($self->_action_roles, @{ $action->attributes->{Does} || [] });
         if (@roles) {
             my $meta = $action->meta->create_anon_class(
-                superclasses => [ref $class],
+                superclasses => [ref $action],
                 roles        => \@roles,
                 cache        => 1,
             );
