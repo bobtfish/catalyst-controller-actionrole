@@ -147,41 +147,42 @@ sub BUILD {
     $self->_action_roles;
 }
 
-around 'create_action' => sub {
-    my $orig = shift;
+sub _apply_action_class_roles {
+    my ($self, $class, @roles) = @_;
+
+    Class::MOP::load_class($_) for @roles;
+    my $meta = Moose::Meta::Class->initialize($class)->create_anon_class(
+        superclasses => [$class],
+        roles        => \@roles,
+        cache        => 1,
+    );
+    $meta->add_method(meta => sub { $meta });
+
+    return $meta->name;
+}
+
+sub create_action {
     my $self = shift;
     my %args = @_;
 
-    my $action = $self->$orig(%args);
+    my $class = $self->action_class(%args);
+    Moose->init_meta( for_class => $class)
+        unless Class::MOP::does_metaclass_exist($class);
 
-    # XXX find a way to distinguish from actions registered in the
-    # C::Controller and those in MyApp::Controller::Foo and its parents
+    my @roles = (
+        (blessed $self ? $self->_action_roles : ()),
+        @{ $args{attributes}->{Does} || [] },
+    );
+    $class = $self->_apply_action_class_roles($class, @roles) if @roles;
 
-    # don't apply roles to default Catalyst::Controller actions
-    unless ( grep { /^_(DISPATCH|BEGIN|AUTO|ACTION|END)$/ } $action->name ) {
-        my @roles = ($self->_action_roles, @{ $action->attributes->{Does} || [] });
-        if (@roles) {
-            my $meta = $action->meta->create_anon_class(
-                superclasses => [ref $action],
-                roles        => \@roles,
-                cache        => 1,
-            );
-            $meta->add_method(meta => sub { $meta });
-            my $sub_class = $meta->name;
-            my $action_args = $self->config->{action_args};
-            my %extra_args = (
-                %{ $action_args->{'*'}           || {} },
-                %{ $action_args->{ $args{name} } || {} },
-            );
+    my $action_args = $self->config->{action_args};
+    my %extra_args = (
+        %{ $action_args->{'*'}           || {} },
+        %{ $action_args->{ $args{name} } || {} },
+    );
 
-            $action =  $sub_class->new({ %extra_args, %args });
-
-        }
-    }
-
-    return $action;
-};
-
+    return $class->new({ %extra_args, %args });
+}
 
 sub _expand_role_shortname {
     my ($self, @shortnames) = @_;
