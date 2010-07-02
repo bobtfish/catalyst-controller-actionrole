@@ -65,7 +65,7 @@ L<Catalyst::Controller/action_args>:
             another_action => { Does => [qw( +MyActionRole::Baz )] },
         },
         action_args => {
-            another_action => { customarg => 'arg1' },
+            another_action => { custom_arg => 'arg1' },
         }
     );
 
@@ -76,6 +76,21 @@ L<Catalyst::Controller/action_args>:
     # and associated action class would get additional arguments passed
     sub another_action : Local { ... }
 
+Lastly, action_args can be applied on the action method level, if you prefer:
+
+    package MyApp::Controller::Baz;
+
+    use parent qw/Catalyst::Controller::ActionRole/;
+
+    ## When the action is create, "custom_arg" is passed to the created
+    ## action class.  This is similar to the above example, except you can't
+    ## centralize your configuration.  You may prefer this for some cases.
+    sub another_action
+      :Local
+      :Does(Foo[custom_arg=>'arg1'])
+    {
+        ## stuff to do ...
+    }
 
 =head1 ROLE PREFIX SEARCHING
 
@@ -173,12 +188,23 @@ sub create_action {
         (blessed $self ? $self->_action_roles : ()),
         @{ $args{attributes}->{Does} || [] },
     );
+    my %role_args = ();
+    @roles = map {
+        if(ref $_) {
+            %role_args = (%role_args, %{$_->[1]});
+            $_->[0];
+        } else {
+            $_;
+        }
+    } @roles;
+
     $class = $self->_apply_action_class_roles($class, @roles) if @roles;
 
     my $action_args = $self->config->{action_args};
     my %extra_args = (
         %{ $action_args->{'*'}           || {} },
         %{ $action_args->{ $args{name} } || {} },
+        %role_args,
     );
 
     return $class->new({ %extra_args, %args });
@@ -207,7 +233,31 @@ sub _expand_role_shortname {
 
 sub _parse_Does_attr {
     my ($self, $app, $name, $value) = @_;
-    return Does => $self->_expand_role_shortname($value);
+    my ($shortname, $args) = $self->_strip_args($value);
+    return Does => [$self->_expand_role_shortname($shortname), $args];
+}
+
+sub _strip_args {
+    my ($self, $value) = @_;
+
+    ## mostly cargo culted from Moose::Util::TypeConstraints
+    use re "eval";
+
+    my $valid_chars = qr{[\+\~\w:\.]};
+    my $type_atom = qr{ (?>$valid_chars+) }x;
+    my $ws = qr{ (?>\s*) }x;
+    my $type_capture_parts = qr{ ($type_atom) (?: \[(.+)\] )? }x;
+    
+    my ($shortname, $arg_str) = ($value =~ m{$type_capture_parts});
+    my @args = $arg_str ? eval $arg_str : ();
+    my %args;
+    if(ref $args[0]) {
+        ## deref if they did Does(Moo({a=>1}) or Moo([b=>2])
+        %args = ref $args[0] eq 'HASH' ? %{$args[0]} : @{$args[0]};
+    } else {
+        %args = @args;
+    }
+    return ($shortname, \%args);
 }
 
 =begin Pod::Coverage

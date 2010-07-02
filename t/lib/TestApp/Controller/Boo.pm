@@ -16,4 +16,10 @@ sub foo  : Local Does('Boo') {
     $ctx->response->body($boo);
 }
 
+sub foo2  : Local Does('Boo[boo=>'world']') {
+    my ($self, $ctx) = @_;
+    my $boo = $ctx->stash->{action_boo};
+    $ctx->response->body($boo);
+}
+
 1;
