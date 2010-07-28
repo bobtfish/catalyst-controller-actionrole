@@ -50,8 +50,8 @@ without specifying the C<Does> keyword in every action definition:
     # precedence over Catalyst::ActionRole::Foo
     sub moo : Local { ... }
 
-Additionally roles could be applied to selected actions without specifying
-C<Does> using L<Catalyst::Controller/action> and configured with
+Additionally roles could be applied to selected actions without attributes
+by config, using L<Catalyst::Controller/action> and configured with
 L<Catalyst::Controller/action_args>:
 
     package MyApp::Controller::Baz;
@@ -59,8 +59,8 @@ L<Catalyst::Controller/action_args>:
     use parent qw/Catalyst::Controller::ActionRole/;
 
     __PACKAGE__->config(
-        action_roles => [qw( Foo )],
         action => {
+            '*' => { Does => [qw( Foo )] },
             some_action => { Does => [qw( ~Bar )] },
             another_action => { Does => [qw( +MyActionRole::Baz )] },
         },
