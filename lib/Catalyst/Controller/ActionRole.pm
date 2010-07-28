@@ -110,15 +110,10 @@ sub BUILD {
     $self->_action_roles;
 }
 
-sub create_action {
-    my ($self, %args) = @_;
+around action_class => sub {
+    my ($orig, $self, %args) = @_;
 
-    my $class = exists $args{attributes}->{ActionClass}
-        ? $args{attributes}->{ActionClass}->[0]
-        : $self->_action_class;
-
-    Class::MOP::load_class($class);
-
+    my $class = $self->$orig(%args);
     my @roles = ($self->_action_roles, @{ $args{attributes}->{Does} || [] });
     if (@roles) {
         Class::MOP::load_class($_) for @roles;
@@ -131,8 +126,8 @@ sub create_action {
         $class = $meta->name;
     }
 
-    return $class->new(\%args);
-}
+    return $class;
+};
 
 sub _expand_role_shortname {
     my ($self, @shortnames) = @_;
