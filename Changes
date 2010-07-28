@@ -1,3 +1,6 @@
+  * Fix action_args to work as expected by simplifying the implementation
+    using refactored method in Catalyst 5.80025
+
 0.14  Sun, 02 May 2010 00:58:39 +0200
   * Add repository metadata (Tomas Doran).
 
