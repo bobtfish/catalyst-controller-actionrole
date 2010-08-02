@@ -23,7 +23,7 @@ extends 'Catalyst::Controller';
 
 =head1 DESCRIPTION
 
-This module allows to apply roles to the C<Catalyst::Action>s for different
+This module allows to apply roles L<Moose::Role> to the C<Catalyst::Action>s for different
 controller methods.
 
 For that a C<Does> attribute is provided. That attribute takes an argument,
@@ -34,7 +34,7 @@ C<::ActionRole::> is prepended. If it isn't prefixed with C<+> or C<~>,
 the role name will be searched for in C<@INC> according to the rules for
 L<role prefix searching|/ROLE PREFIX SEARCHING>.
 
-It's possible to apply roles to B<all> actions of a controller
+Additionally it's possible to to apply roles to B<all> actions of a controller
 without specifying the C<Does> keyword in every action definition:
 
     package MyApp::Controller::Bar;
@@ -45,9 +45,12 @@ without specifying the C<Does> keyword in every action definition:
         action_roles => ['Foo', '~Bar'],
     );
 
-    # has Catalyst::ActionRole::Foo and MyApp::ActionRole::Bar applied
-    # if MyApp::ActionRole::Foo exists and is loadable, it will take
+    # Has Catalyst::ActionRole::Foo and MyApp::ActionRole::Bar applied.
+    # If MyApp::ActionRole::Foo exists and is loadable, it will take
     # precedence over Catalyst::ActionRole::Foo
+    # If MyApp::ActionRole::Bar exists and is loadable, it will be loaded,
+    # but even if it doesn't exist Catalyst::ActionRole::Bar will not be loaded.
+
     sub moo : Local { ... }
 
 Additionally roles could be applied to selected actions without specifying
@@ -257,6 +260,7 @@ sub _strip_args {
     } else {
         %args = @args;
     }
+
     return ($shortname, \%args);
 }
 

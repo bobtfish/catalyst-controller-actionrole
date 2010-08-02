@@ -10,6 +10,3 @@ use Catalyst::Test 'TestApp';
 my $resp = request( "/actionclass/one" );
 ok( $resp->is_success );
 is( $resp->content, 'Catalyst::Action::TestActionClass' );
-
-
-

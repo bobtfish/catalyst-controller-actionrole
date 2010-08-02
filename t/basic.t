@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 12;
+use Test::More tests => 24;
 
 use FindBin;
 use lib "$FindBin::Bin/lib";
@@ -19,4 +19,8 @@ while (my ($path, $role) = each %roles) {
     ok($resp->is_success);
     is($resp->content, $role);
     is($resp->header('X-Affe'), 'Tiger');
+    my $resp2 = request("/bar/${path}");
+    ok($resp2->is_success);
+    is($resp2->content, $role);
+    is($resp2->header('X-Affe'), 'Tiger');
 }
