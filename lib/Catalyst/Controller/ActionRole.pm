@@ -163,11 +163,11 @@ sub _apply_action_class_roles {
     return $meta->name;
 }
 
-sub create_action {
-    my $self = shift;
-    my %args = @_;
 
-    my $class = $self->action_class(%args);
+around 'action_class', sub {
+    my ($orig, $self, @args) = @_;
+    my $class = $self->$orig(@args);
+
     Moose->init_meta( for_class => $class)
         unless Class::MOP::does_metaclass_exist($class);
 
@@ -185,17 +185,11 @@ sub create_action {
         }
     } @roles;
 
-    $class = $self->_apply_action_class_roles($class, @roles) if @roles;
+    $class = $self->_apply_action_class_roles($class, @roles)
+      if @roles;
 
-    my $action_args = $self->config->{action_args};
-    my %extra_args = (
-        %{ $action_args->{'*'}           || {} },
-        %{ $action_args->{ $args{name} } || {} },
-        %role_args,
-    );
-
-    return $class->new({ %extra_args, %args });
-}
+    return $class;
+};
 
 sub _expand_role_shortname {
     my ($self, @shortnames) = @_;
@@ -234,3 +228,40 @@ sub _parse_Does_attr {
 =cut
 
 1;
+
+__END__
+
+sub create_action {
+    my $self = shift;
+    my %args = @_;
+
+    my $class = $self->action_class(%args);
+    Moose->init_meta( for_class => $class)
+        unless Class::MOP::does_metaclass_exist($class);
+
+    my @roles = (
+        (blessed $self ? $self->_action_roles : ()),
+        @{ $args{attributes}->{Does} || [] },
+    );
+    my %role_args = ();
+    @roles = map {
+        if(ref $_) {
+            %role_args = (%role_args, %{$_->[1]});
+            $_->[0];
+        } else {
+            $_;
+        }
+    } @roles;
+
+    $class = $self->_apply_action_class_roles($class, @roles) if @roles;
+
+    my $action_args = $self->config->{action_args};
+    my %extra_args = (
+        %{ $action_args->{'*'}           || {} },
+        %{ $action_args->{ $args{name} } || {} },
+        %role_args,
+    );
+
+    return $class->new({ %extra_args, %args });
+}
+
