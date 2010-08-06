@@ -23,8 +23,8 @@ extends 'Catalyst::Controller';
 
 =head1 DESCRIPTION
 
-This module allows to apply roles L<Moose::Role> to the C<Catalyst::Action>s for different
-controller methods.
+This module allows one to apply L<Moose::Role> based roles to any 
+C<Catalyst::Action>s for more control over behavior reuse.
 
 For that a C<Does> attribute is provided. That attribute takes an argument,
 that determines the role, which is going to be applied. If that argument is
@@ -78,22 +78,6 @@ L<Catalyst::Controller/action_args>:
     # has Catalyst::ActionRole::Foo and MyActionRole::Baz applied
     # and associated action class would get additional arguments passed
     sub another_action : Local { ... }
-
-Lastly, action_args can be applied on the action method level, if you prefer:
-
-    package MyApp::Controller::Baz;
-
-    use parent qw/Catalyst::Controller::ActionRole/;
-
-    ## When the action is create, "custom_arg" is passed to the created
-    ## action class.  This is similar to the above example, except you can't
-    ## centralize your configuration.  You may prefer this for some cases.
-    sub another_action
-      :Local
-      :Does(Foo[custom_arg=>'arg1'])
-    {
-        ## stuff to do ...
-    }
 
 =head1 ROLE PREFIX SEARCHING
 
@@ -216,8 +200,10 @@ sub create_action {
 sub _expand_role_shortname {
     my ($self, @shortnames) = @_;
     my $app = $self->_application;
+    my $prefix = $self->can('_action_role_prefix') 
+      ? $self->_action_role_prefix
+      : ['Catalyst::ActionRole::'];
 
-    my $prefix = $self->can('_action_role_prefix') ? $self->_action_role_prefix : ['Catalyst::ActionRole::'];
     my @prefixes = (qq{${app}::ActionRole::}, @$prefix);
 
     return String::RewritePrefix->rewrite(
@@ -236,32 +222,7 @@ sub _expand_role_shortname {
 
 sub _parse_Does_attr {
     my ($self, $app, $name, $value) = @_;
-    my ($shortname, $args) = $self->_strip_args($value);
-    return Does => [$self->_expand_role_shortname($shortname), $args];
-}
-
-sub _strip_args {
-    my ($self, $value) = @_;
-
-    ## mostly cargo culted from Moose::Util::TypeConstraints
-    use re "eval";
-
-    my $valid_chars = qr{[\+\~\w:\.]};
-    my $type_atom = qr{ (?>$valid_chars+) }x;
-    my $ws = qr{ (?>\s*) }x;
-    my $type_capture_parts = qr{ ($type_atom) (?: \[(.+)\] )? }x;
-    
-    my ($shortname, $arg_str) = ($value =~ m{$type_capture_parts});
-    my @args = $arg_str ? eval $arg_str : ();
-    my %args;
-    if(ref $args[0]) {
-        ## deref if they did Does(Moo({a=>1}) or Moo([b=>2])
-        %args = ref $args[0] eq 'HASH' ? %{$args[0]} : @{$args[0]};
-    } else {
-        %args = @args;
-    }
-
-    return ($shortname, \%args);
+    return Does => $self->_expand_role_shortname($value);
 }
 
 =begin Pod::Coverage
