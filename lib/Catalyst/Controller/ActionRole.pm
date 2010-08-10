@@ -168,19 +168,24 @@ around 'action_class', sub {
     my ($orig, $self, %args) = @_;
     my $class = $self->$orig(%args);
 
-    Moose->init_meta( for_class => $class)
+    Moose->init_meta(for_class => $class)
         unless Class::MOP::does_metaclass_exist($class);
 
-    my @roles = (
-        (blessed $self ? $self->_action_roles : ()),
-        @{ $args{attributes}->{Does} || [] },
-    );
+    my @roles = $self->gather_action_roles(%args);
 
     $class = $self->_apply_action_class_roles($class, @roles)
       if @roles;
 
     return $class;
 };
+
+sub gather_action_roles {
+    my ($self, %args) = @_;
+    return (
+        (blessed $self ? $self->_action_roles : ()),
+        @{ $args{attributes}->{Does} || [] },
+    );
+}
 
 sub _expand_role_shortname {
     my ($self, @shortnames) = @_;
