@@ -175,15 +175,6 @@ around 'action_class', sub {
         (blessed $self ? $self->_action_roles : ()),
         @{ $args{attributes}->{Does} || [] },
     );
-    my %role_args = ();
-    @roles = map {
-        if(ref $_) {
-            %role_args = (%role_args, %{$_->[1]});
-            $_->[0];
-        } else {
-            $_;
-        }
-    } @roles;
 
     $class = $self->_apply_action_class_roles($class, @roles)
       if @roles;
