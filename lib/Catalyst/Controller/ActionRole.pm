@@ -16,8 +16,10 @@ extends 'Catalyst::Controller';
 =head1 SYNOPSIS
 
     package MyApp::Controller::Foo;
+    use Moose;
+    use namespace::autoclean;
 
-    use parent qw/Catalyst::Controller::ActionRole/;
+    BEGIN { extends qw/Catalyst::Controller::ActionRole/; }
 
     sub bar : Local Does('Moo') { ... }
 
@@ -38,8 +40,10 @@ Additionally it's possible to to apply roles to B<all> actions of a controller
 without specifying the C<Does> keyword in every action definition:
 
     package MyApp::Controller::Bar;
+    use Moose;
+    use namespace::autoclean;
 
-    use parent qw/Catalyst::Controller::ActionRole/;
+    BEGIN { extends qw/Catalyst::Controller::ActionRole/; }
 
     __PACKAGE__->config(
         action_roles => ['Foo', '~Bar'],
