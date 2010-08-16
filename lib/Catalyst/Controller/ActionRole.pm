@@ -107,10 +107,13 @@ performed.
 =cut
 
 has _action_role_args => (
-    is         => 'ro',
+    traits     => [qw(Array)],
     isa        => ArrayRef[Str],
-    init_arg   => undef,
-    lazy_build => 1,
+    init_arg   => 'action_roles',
+    default    => sub { [] },
+    handles    => {
+        _action_role_args => 'elements',
+    },
 );
 
 has _action_roles => (
@@ -125,27 +128,14 @@ has _action_roles => (
 
 sub _build__action_roles {
     my $self = shift;
-    return $self->_action_role_args;
-}
-
-sub _build__action_role_args {
-    my $self = shift;
-    my @roles;
-    if ( my $config = $self->config ) {
-        if ( my $action_roles = $config->{action_roles} ) {
-            @roles = $self->_expand_role_shortname(@$action_roles);
-            Class::MOP::load_class($_) for @roles;
-        }
-    }
-    
+    my @roles = $self->_expand_role_shortname($self->_action_role_args);
+    Class::MOP::load_class($_) for @roles;
     return \@roles;
 }
 
 sub BUILD {
     my $self = shift;
     # force this to run at object creation time
-    $self->_action_role_args;
-    # check if action_roles are RoleNames
     $self->_action_roles;
 }
 
