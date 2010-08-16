@@ -1,5 +1,4 @@
-0.15  TBD
-  * Added action_args support and Does parameterization
+  * Added action_args support
   * Improvements to documentation (William King)
 
 0.14  Sun, 02 May 2010 00:58:39 +0200
